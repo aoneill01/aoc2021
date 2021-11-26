@@ -2,16 +2,26 @@ import { readdir } from 'fs'
 import { promisify } from 'util'
 
 export async function getDays() {
-  const result = {}
-  for (const file of await promisify(readdir)('./src/days/')) {
-    const module = await import(`../days/${file}`)
-    result[fileToDay(file)] = module
-  }
-  return result
+  return (await promisify(readdir)('./src/days/')).map(fileToDay)
 }
 
 function fileToDay(file) {
   const regex = /day(?<day>\d+).js/
   const { day } = regex.exec(file).groups
-  return `day ${day.padStart(2, '0')}`
+  return parseInt(day, 10)
+}
+
+export async function getPartFunction(day, part) {
+  let module
+  try {
+    module = await import(`../days/day${parseInt(day, 10)}.js`)
+  } catch (err) {
+    throw new Error(`Day ${day} not found`)
+  }
+
+  const fn = module[`part${parseInt(part, 10)}`]
+  if (!fn) {
+    throw new Error(`Part ${part} not found`)
+  }
+  return fn
 }

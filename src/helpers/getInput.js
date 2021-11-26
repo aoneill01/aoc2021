@@ -2,7 +2,7 @@ import fetch from 'node-fetch'
 import dotenv from 'dotenv'
 dotenv.config()
 
-export default async function getInput(day, separator = '\n') {
+export default async function getInput(day) {
   const response = await fetch(`https://adventofcode.com/2021/day/${day}/input`, {
     headers: {
       accept: 'text/html',
@@ -13,6 +13,6 @@ export default async function getInput(day, separator = '\n') {
 
   const text = await response.text()
 
-  const lines = text.split(separator)
+  const lines = text.split('\n')
   return lines[lines.length - 1] === '' ? lines.slice(0, lines.length - 1) : lines
 }
