@@ -1,15 +1,12 @@
 import { readdir } from 'fs'
 import { promisify } from 'util'
 
-export async function getDays() {
-  return (await promisify(readdir)('./src/days/')).map(fileToDay)
-}
+const regex = /^day(?<day>\d+).js$/
+const readDirAsync = promisify(readdir)
+const isDayFile = (file) => regex.test(file)
+const fileToDay = (file) => parseInt(regex.exec(file).groups.day)
 
-function fileToDay(file) {
-  const regex = /day(?<day>\d+).js/
-  const { day } = regex.exec(file).groups
-  return parseInt(day, 10)
-}
+export const getDays = async () => (await readDirAsync('./src/days/')).filter(isDayFile).map(fileToDay)
 
 export async function getPartFunction(day, part) {
   let module

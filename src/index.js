@@ -9,7 +9,7 @@ const { day, part } = await inquirer.prompt([
     type: 'list',
     name: 'day',
     message: 'Which day?',
-    choices: days.sort().reverse(),
+    choices: days.sort((a, b) => b - a),
   },
   {
     type: 'list',
