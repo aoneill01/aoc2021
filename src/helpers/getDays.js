@@ -9,12 +9,7 @@ const fileToDay = (file) => parseInt(regex.exec(file).groups.day)
 export const getDays = async () => (await readDirAsync('./src/days/')).filter(isDayFile).map(fileToDay)
 
 export async function getPartFunction(day, part) {
-  let module
-  try {
-    module = await import(`../days/day${parseInt(day, 10)}.js`)
-  } catch (err) {
-    throw new Error(`Day ${day} not found`)
-  }
+  const module = await import(`../days/day${parseInt(day, 10)}.js`)
 
   const fn = module[`part${parseInt(part, 10)}`]
   if (!fn) {
