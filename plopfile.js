@@ -1,4 +1,4 @@
-module.exports = function (plop) {
+export default (plop) => {
   plop.setGenerator('day', {
     description: 'Generate new day file',
     prompts: [
