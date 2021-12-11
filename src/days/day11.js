@@ -1,4 +1,5 @@
-import colors from 'colors'
+import 'colors'
+import readline from 'readline'
 import { getInput } from '../helpers/getInput.js'
 
 export async function part1() {
@@ -6,16 +7,21 @@ export async function part1() {
   // const input = sampleInput
   const octopuses = parseInput(input)
 
-  console.log('Before any steps:')
+  console.clear()
+  readline.cursorTo(process.stdout, 0, 0)
+  console.log('Before any steps           ')
   printOctopuses(octopuses)
   console.log()
 
   let answer = 0
   for (let i = 1; i <= 100; i++) {
     answer += step(octopuses)
-    console.log(`After step ${i}`)
+    readline.cursorTo(process.stdout, 0, 0)
+
+    console.log(`After step ${`${i}`.padStart(3, ' ')}    `)
     printOctopuses(octopuses)
-    console.log()
+
+    await new Promise((resolve) => setTimeout(resolve, 200))
   }
 
   console.log(`${answer} flashes`)
