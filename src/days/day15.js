@@ -1,27 +1,26 @@
 import { getInput } from '../helpers/getInput.js'
-import { writeFileSync } from 'fs'
+import Graph from 'node-dijkstra'
 
 export async function part1() {
   const input = await getInput(15)
   // const input = sampleInput
   const cave = input.map((line) => line.split('').map((riskLevel) => +riskLevel))
-  const risk = [...Array(cave.length)].map(() => Array(cave[0].length).fill(null))
+  const graph = new Graph()
 
   for (let row = 0; row < cave.length; row++) {
     for (let col = 0; col < cave[row].length; col++) {
-      if (row == 0 && col == 0) {
-        risk[row][col] = 0
-      } else if (row == 0) {
-        risk[row][col] = risk[row][col - 1] + cave[row][col]
-      } else if (col == 0) {
-        risk[row][col] = risk[row - 1][col] + cave[row][col]
-      } else {
-        risk[row][col] = Math.min(risk[row][col - 1], risk[row - 1][col]) + cave[row][col]
-      }
+      graph.addNode(
+        toKey(row, col),
+        [...adjacentLocations(cave, row, col)]
+          .map(({ row: r, col: c }) => getCost(cave, r, c))
+          .reduce((acc, cost) => ({ ...acc, ...cost }), {})
+      )
     }
   }
 
-  console.log(risk[cave.length - 1][cave[0].length - 1])
+  const { cost } = graph.path(toKey(0, 0), toKey(cave.length - 1, cave[0].length - 1), { cost: true })
+
+  console.log(cost)
 }
 
 export async function part2() {
@@ -41,28 +40,33 @@ export async function part2() {
       }
     }
   }
-  const risk = [...Array(cave.length)].map(() => Array(cave[0].length).fill(null))
+  const graph = new Graph()
 
   for (let row = 0; row < cave.length; row++) {
     for (let col = 0; col < cave[row].length; col++) {
-      if (row == 0 && col == 0) {
-        risk[row][col] = 0
-      } else if (row == 0) {
-        risk[row][col] = risk[row][col - 1] + cave[row][col]
-      } else if (col == 0) {
-        risk[row][col] = risk[row - 1][col] + cave[row][col]
-      } else {
-        risk[row][col] = Math.min(risk[row][col - 1], risk[row - 1][col]) + cave[row][col]
-      }
+      graph.addNode(
+        toKey(row, col),
+        [...adjacentLocations(cave, row, col)]
+          .map(({ row: r, col: c }) => getCost(cave, r, c))
+          .reduce((acc, cost) => ({ ...acc, ...cost }), {})
+      )
     }
   }
 
-  console.log(cave, risk, risk[cave.length - 1][cave[0].length - 1])
-  writeDebug(cave, risk)
+  const { cost } = graph.path(toKey(0, 0), toKey(cave.length - 1, cave[0].length - 1), { cost: true })
+
+  console.log(cost)
 }
 
-function writeDebug(cave, risk) {
-  //
+const toKey = (row, col) => `${row},${col}`
+
+const getCost = (cave, row, col) => ({ [toKey(row, col)]: cave[row][col] })
+
+function* adjacentLocations(cave, row, col) {
+  if (row - 1 >= 0) yield { row: row - 1, col }
+  if (col - 1 >= 0) yield { row, col: col - 1 }
+  if (row + 1 < cave.length) yield { row: row + 1, col }
+  if (col + 1 < cave[row].length) yield { row, col: col + 1 }
 }
 
 const sampleInput = `1163751742
