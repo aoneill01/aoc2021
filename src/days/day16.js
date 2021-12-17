@@ -2,17 +2,18 @@ import { getInput } from '../helpers/getInput.js'
 
 export async function part1() {
   const input = (await getInput(16))[0]
-  // const input = sampleInput7
+  // const input = sampleInput4
   const result = readPacket(input, 0)
   // console.log(JSON.stringify(result, null, 2))
   console.log(sumVersionNumbers(result))
 }
 
 export async function part2() {
-  // const input = (await getInput(16))[0]
-  const input = sampleInput8
+  const input = (await getInput(16))[0]
+  // const input = sampleInput8
+
   const result = readPacket(input, 0)
-  console.log(JSON.stringify(result, null, 2))
+  // console.log(JSON.stringify(result, null, 2))
   console.log(evaluatePacket(result))
 }
 
@@ -32,7 +33,7 @@ function evaluatePacket(packet) {
       return packet.packet.subPackets.reduce((sum, p) => sum + evaluatePacket(p), 0)
     }
     case 1: {
-      return packet.packet.subPackets.reduce((sum, p) => sum * evaluatePacket(p), 1)
+      return packet.packet.subPackets.reduce((product, p) => product * evaluatePacket(p), 1)
     }
     case 2: {
       return Math.min(...packet.packet.subPackets.map(evaluatePacket))
@@ -66,11 +67,9 @@ function readPacket(hex, position) {
   const typeId = readBits(hex, position + 3, 3)
   if (typeId === 4) {
     let num = 0
-    let p = position + 6
     for (let p = position + 6; ; p += 5) {
       const next = readBits(hex, p, 5)
-      console.log(next.toString(2), p)
-      num <<= 4
+      num *= 16
       num += next & 0b1111
       if ((next & 0b10000) === 0) {
         return {
@@ -100,7 +99,7 @@ function readPacket(hex, position) {
 
         return {
           start: position,
-          end: finalPosition,
+          end: p,
           packet: {
             version,
             typeId,
@@ -138,9 +137,11 @@ function readPacket(hex, position) {
 
 function readBits(hex, position, length) {
   const first = Math.floor(position / 4)
-  const last = Math.floor((position + length) / 4)
+  let last = Math.floor((position + length) / 4)
+  const mod4 = (position + length) % 4
+  if (mod4 === 0) last--
   let decimal = parseInt(hex.substring(first, last + 1), 16)
-  decimal >>>= 4 - ((position + length) % 4)
+  decimal >>>= 4 - (mod4 === 0 ? 4 : mod4)
   let mask = 0
   for (let i = 0; i < length; i++) {
     mask <<= 1
