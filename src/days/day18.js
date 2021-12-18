@@ -12,11 +12,12 @@ export async function part1() {
 export async function part2() {
   const input = await getInput(18)
   // const input = sampleInput
+  const assignment = input.map(parseLine)
   const magnitudes = []
-  for (let i = 0; i < input.length - 1; i++) {
-    for (let j = i + 1; j < input.length; j++) {
-      magnitudes.push(add(parseLine(input[i]), parseLine(input[j])).magnitude())
-      magnitudes.push(add(parseLine(input[j]), parseLine(input[i])).magnitude())
+  for (let i = 0; i < assignment.length - 1; i++) {
+    for (let j = i + 1; j < assignment.length; j++) {
+      magnitudes.push(add(assignment[i], assignment[j]).magnitude())
+      magnitudes.push(add(assignment[j], assignment[i]).magnitude())
     }
   }
   console.log(Math.max(...magnitudes))
@@ -24,7 +25,7 @@ export async function part2() {
 
 const parseLine = (line) => createFromArray(JSON.parse(line))
 
-const add = (a, b) => new Pair(a, b).reduce()
+const add = (a, b) => new Pair(a.clone(), b.clone()).reduce()
 
 function createFromArray(array) {
   const left = Array.isArray(array[0]) ? createFromArray(array[0]) : new Leaf(array[0])
@@ -70,14 +71,22 @@ class Pair extends Node {
   }
 
   reduce() {
-    while (this.singleReduction()) {
-      // console.log(this.toString())
-    }
+    while (this.singleReduction());
     return this
   }
 
   singleReduction() {
     const leaves = this.inorderLeaves()
+
+    function replaceNode(node, replacement) {
+      if (node.parent.left === node) {
+        node.parent.left = replacement
+      } else {
+        node.parent.right = replacement
+      }
+      replacement.parent = node.parent
+      node.parent = null
+    }
 
     for (let i = 0; i < leaves.length; i++) {
       if (leaves[i].calculateDepth() > 4) {
@@ -88,16 +97,7 @@ class Pair extends Node {
         if (i + 2 < leaves.length) {
           leaves[i + 2].value += leaves[i + 1].value
         }
-        const zero = new Leaf(0)
-        if (leaves[i].parent.parent.left === leaves[i].parent) {
-          leaves[i].parent.parent.left = zero
-          zero.parent = leaves[i].parent.parent
-          leaves[i].parent = null
-        } else {
-          leaves[i].parent.parent.right = zero
-          zero.parent = leaves[i].parent.parent
-          leaves[i].parent = null
-        }
+        replaceNode(leaves[i].parent, new Leaf(0))
         return true
       }
     }
@@ -106,17 +106,7 @@ class Pair extends Node {
       if (leaves[i].value >= 10) {
         // split
         const split = new Pair(new Leaf(Math.floor(leaves[i].value / 2)), new Leaf(Math.ceil(leaves[i].value / 2)))
-
-        if (leaves[i].parent.left === leaves[i]) {
-          leaves[i].parent.left = split
-          split.parent = leaves[i].parent
-          leaves[i].parent = null
-        } else {
-          leaves[i].parent.right = split
-          split.parent = leaves[i].parent
-          leaves[i].parent = null
-        }
-
+        replaceNode(leaves[i], split)
         return true
       }
     }
@@ -126,6 +116,10 @@ class Pair extends Node {
 
   magnitude() {
     return 3 * this.left.magnitude() + 2 * this.right.magnitude()
+  }
+
+  clone() {
+    return parseLine(this.toString())
   }
 }
 
