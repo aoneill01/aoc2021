@@ -1,16 +1,68 @@
 import { getInput } from '../helpers/getInput.js'
 
 export async function part1() {
-  // const input = await getInput(19)
-  const input = sampleInput
+  const input = await getInput(19)
+  // const input = sampleInput
   const scanners = parseInput(input)
-  console.log(scanners)
+  // console.log(scanners)
+
+  let [matched, ...unmatched] = scanners
+  outer: while (unmatched.length > 0) {
+    for (const scanner of unmatched) {
+      const t = findOverlapTransformation(matched, scanner)
+      if (t) {
+        console.log('found match')
+        matched = combinePoints(matched, scanner, t)
+        unmatched = unmatched.filter((s) => s !== scanner)
+        continue outer
+      }
+    }
+    console.log('should not get here')
+  }
+  console.log(matched.length)
+  // let t = findOverlapTransformation(scanners[0], scanners[1])
+  // let s = combinePoints(scanners[0], scanners[1], t)
+  // t = findOverlapTransformation(s, scanners[4])
+  // console.log()
+  // s = combinePoints(s, scanners[4], t)
+  // console.log(s)
   // const scanner0 = scanners[0]
-  // transformations.forEach((transformation) => console.log(scanner0.map(transformation)))
+  // orientationTransformations.forEach((transformation) => console.log(scanner0.map(transformation)))
 }
 
 export async function part2() {
   // const input = await getInput(19)
+}
+
+const pointEquals = (pA, pB) => pA.x === pB.x && pA.y === pB.y && pA.z === pB.z
+
+function combinePoints(source, others, transformation) {
+  const result = [...source]
+  for (const point of others.map(transformation)) {
+    if (!result.some((p) => pointEquals(p, point))) {
+      result.push(point)
+    } else {
+      // console.log(point)
+    }
+  }
+
+  return result
+}
+
+function findOverlapTransformation(scannerA, scannerB) {
+  for (const orientation of orientationTransformations) {
+    for (const aPoint of scannerA) {
+      for (const bPoint of scannerB) {
+        const transformation = multiTransformation(orientation, deltaTransformation(orientation(bPoint), aPoint))
+        const transformedB = scannerB.map(transformation)
+        const matchCount = transformedB.filter((b) => scannerA.some((a) => pointEquals(b, a))).length
+        if (matchCount >= 12) {
+          // console.log(matchCount, transformation({ x: 0, y: 0, z: 0 }))
+          return transformation
+        }
+      }
+    }
+  }
 }
 
 function parseInput(input) {
@@ -32,7 +84,11 @@ function parseInput(input) {
   return results
 }
 
-function createDeltaTransformation(from, to) {
+function multiTransformation(t1, t2) {
+  return (point) => t2(t1(point))
+}
+
+function deltaTransformation(from, to) {
   return transformation(
     (point) => point.x + (to.x - from.x),
     (point) => point.y + (to.y - from.y),
@@ -51,7 +107,7 @@ function transformation(getX, getY, getZ) {
   return (point) => ({ x: getX(point), y: getY(point), z: getZ(point) })
 }
 
-const transformations = [
+const orientationTransformations = [
   transformation(posX, posY, posZ),
   transformation(posZ, posY, negX),
   transformation(negX, posY, negZ),
