@@ -4,7 +4,6 @@ export async function part1() {
   const input = await getInput(19)
   // const input = sampleInput
   const scanners = parseInput(input)
-  // console.log(scanners)
 
   let [matched, ...unmatched] = scanners
   outer: while (unmatched.length > 0) {
@@ -20,21 +19,42 @@ export async function part1() {
     console.log('should not get here')
   }
   console.log(matched.length)
-  // let t = findOverlapTransformation(scanners[0], scanners[1])
-  // let s = combinePoints(scanners[0], scanners[1], t)
-  // t = findOverlapTransformation(s, scanners[4])
-  // console.log()
-  // s = combinePoints(s, scanners[4], t)
-  // console.log(s)
-  // const scanner0 = scanners[0]
-  // orientationTransformations.forEach((transformation) => console.log(scanner0.map(transformation)))
 }
 
 export async function part2() {
-  // const input = await getInput(19)
+  const input = await getInput(19)
+  // const input = sampleInput
+  const scanners = parseInput(input)
+
+  let beacons = [{ x: 0, y: 0, z: 0 }]
+  let [matched, ...unmatched] = scanners
+  outer: while (unmatched.length > 0) {
+    for (const scanner of unmatched) {
+      const t = findOverlapTransformation(matched, scanner)
+      if (t) {
+        console.log('found match')
+        matched = combinePoints(matched, scanner, t)
+        unmatched = unmatched.filter((s) => s !== scanner)
+        beacons.push(t({ x: 0, y: 0, z: 0 }))
+        continue outer
+      }
+    }
+    console.log('should not get here')
+  }
+
+  let maxDistance
+  for (let i = 0; i < beacons.length - 1; i++) {
+    for (let j = i + 1; j < beacons.length; j++) {
+      const d = distance(beacons[i], beacons[j])
+      if (maxDistance === undefined || d > maxDistance) maxDistance = d
+    }
+  }
+  console.log(maxDistance)
 }
 
 const pointEquals = (pA, pB) => pA.x === pB.x && pA.y === pB.y && pA.z === pB.z
+
+const distance = (pA, pB) => Math.abs(pA.x - pB.x) + Math.abs(pA.y - pB.y) + Math.abs(pA.z - pB.z)
 
 function combinePoints(source, others, transformation) {
   const result = [...source]
