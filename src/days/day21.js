@@ -1,4 +1,4 @@
-import { getInput } from '../helpers/getInput.js'
+import memoize from 'memoizee'
 
 export async function part1() {
   let die = 1
@@ -23,8 +23,7 @@ export async function part1() {
 }
 
 export async function part2() {
-  const wins = [0n, 0n]
-  calculateWins(6, 0, 9, 0, 0, 1n, wins)
+  const wins = calculateWins(6, 0, 9, 0, 0)
   if (wins[0] > wins[1]) {
     console.log(`${wins[0]}`)
   } else {
@@ -32,39 +31,45 @@ export async function part2() {
   }
 }
 
-const distributions = {
-  3: 1n,
-  4: 3n,
-  5: 6n,
-  6: 7n,
-  7: 6n,
-  8: 3n,
-  9: 1n,
-}
+const distributions = new Map([
+  [3, 1n],
+  [4, 3n],
+  [5, 6n],
+  [6, 7n],
+  [7, 6n],
+  [8, 3n],
+  [9, 1n],
+])
 
-function calculateWins(p1, s1, p2, s2, turn, universes, wins) {
+// TODO: possibly refactor to (currentPlayer, currentScore, nextPlayer, nextScore) to simplify even further since
+// we don't need to distinguish player 1 from player 2 in the final answer.
+const calculateWins = memoize((p1, s1, p2, s2, turn) => {
+  const wins = [0n, 0n]
   if (turn === 0) {
-    for (const [roll, dist] of Object.entries(distributions)) {
-      const r = +roll
-      const [newP1, newP1Score] = movePlayer(p1, s1, r)
+    for (const [roll, dist] of distributions) {
+      const [newP1, newP1Score] = movePlayer(p1, s1, roll)
       if (newP1Score >= 21) {
-        wins[0] += universes * dist
+        wins[0] += dist
       } else {
-        calculateWins(newP1, newP1Score, p2, s2, 1, universes * dist, wins)
+        const recursiveWins = calculateWins(newP1, newP1Score, p2, s2, 1)
+        wins[0] += dist * recursiveWins[0]
+        wins[1] += dist * recursiveWins[1]
       }
     }
   } else {
-    for (const [roll, dist] of Object.entries(distributions)) {
-      const r = +roll
-      const [newP2, newP2Score] = movePlayer(p2, s2, r)
+    for (const [roll, dist] of distributions) {
+      const [newP2, newP2Score] = movePlayer(p2, s2, roll)
       if (newP2Score >= 21) {
-        wins[1] += universes * dist
+        wins[1] += dist
       } else {
-        calculateWins(p1, s1, newP2, newP2Score, 0, universes * dist, wins)
+        const recursiveWins = calculateWins(p1, s1, newP2, newP2Score, 0)
+        wins[0] += dist * recursiveWins[0]
+        wins[1] += dist * recursiveWins[1]
       }
     }
   }
-}
+  return wins
+})
 
 function movePlayer(p, s, roll) {
   const newP = ((p + roll - 1) % 10) + 1
