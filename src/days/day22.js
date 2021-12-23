@@ -5,38 +5,50 @@ const OFF = 'off'
 
 export async function part1() {
   const input = await getInput(22)
-  // const input = sampleInput
-  const initProcedure = input.map(parseLine)
-  const onCubes = new Set()
-  for (const instruction of initProcedure) {
-    for (let x = clippedStart(instruction.xStart); x <= clippedEnd(instruction.xEnd); x++) {
-      for (let y = clippedStart(instruction.yStart); y <= clippedEnd(instruction.yEnd); y++) {
-        for (let z = clippedStart(instruction.zStart); z <= clippedEnd(instruction.zEnd); z++) {
-          if (instruction.status === ON) {
-            onCubes.add(toKey({ x, y, z }))
-          } else {
-            onCubes.delete(toKey({ x, y, z }))
-          }
+  // const input = sampleInput2
+  const instructions = input.map(parseLine)
+  const initRegion = new Region(new Range(-50, 50), new Range(-50, 50), new Range(-50, 50))
+  let lit = []
+  for (const instruction of instructions) {
+    // It doesn't look like any instructions have regions that are both inside and outside the
+    // initialization region. This would need to be updated otherwise.
+    if (!instruction.region.overlaps(initRegion)) continue
+    if (instruction.status === ON) {
+      // build a list of non-overlapping regions to be added to `lit`
+      let toAdd = [instruction.region]
+      for (const litRegion of lit) {
+        if (toAdd.some((r) => litRegion.overlaps(r))) {
+          toAdd = toAdd.flatMap((r) => r.subtract(litRegion))
         }
       }
+      lit.push(...toAdd)
+    } else {
+      lit = lit.flatMap((r) => r.subtract(instruction.region))
     }
   }
-
-  console.log(onCubes.size)
+  console.log(`${lit.reduce((sum, r) => sum + r.cubes(), 0n)}`)
 }
 
 export async function part2() {
-  // const input = await getInput(22)
-}
-
-function clippedStart(val) {
-  if (val < -50) return -50
-  return val
-}
-
-function clippedEnd(val) {
-  if (val > 50) return 50
-  return val
+  const input = await getInput(22)
+  // const input = sampleInput2
+  const instructions = input.map(parseLine)
+  let lit = []
+  for (const instruction of instructions) {
+    if (instruction.status === ON) {
+      // build a list of non-overlapping regions to be added to `lit`
+      let toAdd = [instruction.region]
+      for (const litRegion of lit) {
+        if (toAdd.some((r) => litRegion.overlaps(r))) {
+          toAdd = toAdd.flatMap((r) => r.subtract(litRegion))
+        }
+      }
+      lit.push(...toAdd)
+    } else {
+      lit = lit.flatMap((r) => r.subtract(instruction.region))
+    }
+  }
+  console.log(`${lit.reduce((sum, r) => sum + r.cubes(), 0n)}`)
 }
 
 function parseLine(line) {
@@ -45,17 +57,94 @@ function parseLine(line) {
   const { status, xStart, xEnd, yStart, yEnd, zStart, zEnd } = regex.exec(line).groups
   return {
     status,
-    xStart: +xStart,
-    xEnd: +xEnd,
-    yStart: +yStart,
-    yEnd: +yEnd,
-    zStart: +zStart,
-    zEnd: +zEnd,
+    region: new Region(new Range(+xStart, +xEnd), new Range(+yStart, +yEnd), new Range(+zStart, +zEnd)),
   }
 }
 
-function toKey(point) {
-  return `(${point.x}, ${point.y}, ${point.z})`
+class Region {
+  #xRange
+  #yRange
+  #zRange
+
+  constructor(xRange, yRange, zRange) {
+    this.#xRange = xRange
+    this.#yRange = yRange
+    this.#zRange = zRange
+  }
+
+  overlaps(other) {
+    return (
+      this.#xRange.overlaps(other.#xRange) &&
+      this.#yRange.overlaps(other.#yRange) &&
+      this.#zRange.overlaps(other.#zRange)
+    )
+  }
+
+  cubes() {
+    return BigInt(this.#xRange.magnitude()) * BigInt(this.#yRange.magnitude()) * BigInt(this.#zRange.magnitude())
+  }
+
+  slice(other) {
+    if (!this.overlaps(other)) return [this]
+
+    const result = []
+    for (const xRange of this.#xRange.slice(other.#xRange)) {
+      for (const yRange of this.#yRange.slice(other.#yRange)) {
+        for (const zRange of this.#zRange.slice(other.#zRange)) {
+          result.push(new Region(xRange, yRange, zRange))
+        }
+      }
+    }
+    return result
+  }
+
+  subtract(other) {
+    const slices = this.slice(other)
+    return slices.filter((s) => !s.overlaps(other))
+  }
+
+  toString() {
+    return `x=${this.#xRange.toString()},y=${this.#yRange.toString()},z=${this.#zRange.toString()}`
+  }
+}
+class Range {
+  #start
+  #end
+
+  constructor(start, end) {
+    this.#start = start
+    this.#end = end
+  }
+
+  overlaps(other) {
+    return Math.min(this.#end, other.#end) >= Math.max(this.#start, other.#start)
+  }
+
+  magnitude() {
+    return this.#end - this.#start + 1
+  }
+
+  slice(other) {
+    if (!this.overlaps(other)) return [this]
+
+    const result = []
+    if (this.#start < other.#start) {
+      result.push(new Range(this.#start, other.#start - 1))
+    }
+    result.push(new Range(Math.max(this.#start, other.#start), Math.min(this.#end, other.#end)))
+    if (this.#end > other.#end) {
+      result.push(new Range(other.#end + 1, this.#end))
+    }
+    return result
+  }
+
+  toString() {
+    return `${this.#start}..${this.#end}`
+  }
+
+  equals(other) {
+    return this.#start === other.#start && this.#end === other.#end
+  }
 }
 
 const sampleInput = `on x=-20..26,y=-36..17,z=-47..7
@@ -80,3 +169,64 @@ off x=18..30,y=-20..-8,z=-3..13
 on x=-41..9,y=-7..43,z=-33..15
 on x=-54112..-39298,y=-85059..-49293,z=-27449..7877
 on x=967..23432,y=45373..81175,z=27513..53682`.split('\n')
+
+const sampleInput2 = `on x=-5..47,y=-31..22,z=-19..33
+on x=-44..5,y=-27..21,z=-14..35
+on x=-49..-1,y=-11..42,z=-10..38
+on x=-20..34,y=-40..6,z=-44..1
+off x=26..39,y=40..50,z=-2..11
+on x=-41..5,y=-41..6,z=-36..8
+off x=-43..-33,y=-45..-28,z=7..25
+on x=-33..15,y=-32..19,z=-34..11
+off x=35..47,y=-46..-34,z=-11..5
+on x=-14..36,y=-6..44,z=-16..29
+on x=-57795..-6158,y=29564..72030,z=20435..90618
+on x=36731..105352,y=-21140..28532,z=16094..90401
+on x=30999..107136,y=-53464..15513,z=8553..71215
+on x=13528..83982,y=-99403..-27377,z=-24141..23996
+on x=-72682..-12347,y=18159..111354,z=7391..80950
+on x=-1060..80757,y=-65301..-20884,z=-103788..-16709
+on x=-83015..-9461,y=-72160..-8347,z=-81239..-26856
+on x=-52752..22273,y=-49450..9096,z=54442..119054
+on x=-29982..40483,y=-108474..-28371,z=-24328..38471
+on x=-4958..62750,y=40422..118853,z=-7672..65583
+on x=55694..108686,y=-43367..46958,z=-26781..48729
+on x=-98497..-18186,y=-63569..3412,z=1232..88485
+on x=-726..56291,y=-62629..13224,z=18033..85226
+on x=-110886..-34664,y=-81338..-8658,z=8914..63723
+on x=-55829..24974,y=-16897..54165,z=-121762..-28058
+on x=-65152..-11147,y=22489..91432,z=-58782..1780
+on x=-120100..-32970,y=-46592..27473,z=-11695..61039
+on x=-18631..37533,y=-124565..-50804,z=-35667..28308
+on x=-57817..18248,y=49321..117703,z=5745..55881
+on x=14781..98692,y=-1341..70827,z=15753..70151
+on x=-34419..55919,y=-19626..40991,z=39015..114138
+on x=-60785..11593,y=-56135..2999,z=-95368..-26915
+on x=-32178..58085,y=17647..101866,z=-91405..-8878
+on x=-53655..12091,y=50097..105568,z=-75335..-4862
+on x=-111166..-40997,y=-71714..2688,z=5609..50954
+on x=-16602..70118,y=-98693..-44401,z=5197..76897
+on x=16383..101554,y=4615..83635,z=-44907..18747
+off x=-95822..-15171,y=-19987..48940,z=10804..104439
+on x=-89813..-14614,y=16069..88491,z=-3297..45228
+on x=41075..99376,y=-20427..49978,z=-52012..13762
+on x=-21330..50085,y=-17944..62733,z=-112280..-30197
+on x=-16478..35915,y=36008..118594,z=-7885..47086
+off x=-98156..-27851,y=-49952..43171,z=-99005..-8456
+off x=2032..69770,y=-71013..4824,z=7471..94418
+on x=43670..120875,y=-42068..12382,z=-24787..38892
+off x=37514..111226,y=-45862..25743,z=-16714..54663
+off x=25699..97951,y=-30668..59918,z=-15349..69697
+off x=-44271..17935,y=-9516..60759,z=49131..112598
+on x=-61695..-5813,y=40978..94975,z=8655..80240
+off x=-101086..-9439,y=-7088..67543,z=33935..83858
+off x=18020..114017,y=-48931..32606,z=21474..89843
+off x=-77139..10506,y=-89994..-18797,z=-80..59318
+off x=8476..79288,y=-75520..11602,z=-96624..-24783
+on x=-47488..-1262,y=24338..100707,z=16292..72967
+off x=-84341..13987,y=2429..92914,z=-90671..-1318
+off x=-37810..49457,y=-71013..-7894,z=-105357..-13188
+off x=-27365..46395,y=31009..98017,z=15428..76570
+off x=-70369..-16548,y=22648..78696,z=-1892..86821
+on x=-53470..21291,y=-120233..-33476,z=-44150..38147
+off x=-93533..-4276,y=-16170..68771,z=-104985..-24507`.split('\n')
