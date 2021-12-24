@@ -1,78 +1,63 @@
 import { getInput } from '../helpers/getInput.js'
 
 export async function part1() {
-  //   const program = new Program(
-  //     `inp w
-  // mul x 0
-  // add x z
-  // mod x 26
-  // div z 1
-  // add x 10
-  // eql x w
-  // eql x 0
-  // mul y 0
-  // add y 25
-  // mul y x
-  // add y 1
-  // mul z y
-  // mul y 0
-  // add y w
-  // add y 5
-  // mul y x
-  // add z y`.split('\n')
-  //   )
-  //   program.exec(arrayInput([5]))
-  //   console.log(program.toString())
-
-  // const digits = [9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9]
-  // const filler = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
-  // const input = await getInput(24)
-  // const program = new Program(input)
-
-  // const found = []
-  // for (let digitIndex = 0; digitIndex < 14; digitIndex++) {
-  //   let min = null
-  //   for (let digit = 9; digit >= 1; digit--) {
-  //     const a = [...found, digit, ...filler.slice(0, 14 - digitIndex - 1)]
-  //     program.exec(arrayInput(a))
-  //     if (min === null || program.registerValue('z') < min.z) {
-  //       min = { digit, z: program.registerValue('z') }
-  //     }
-  //   }
-  //   console.log(min, found)
-  //   found.push(min.digit)
-  // }
-
-  let best = [9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9]
-  const input = await getInput(24)
-  const program = new Program(input)
-
-  while (true) {
-    let min = null
-    for (let digitIndex = 0; digitIndex < 14; digitIndex++) {
-      for (let digit = 9; digit >= 1; digit--) {
-        const value = best.slice(0)
-        value[digitIndex] = digit
-        program.exec(arrayInput(value))
-        if (min === null || program.registerValue('z') < min.z) {
-          min = { value, z: program.registerValue('z') }
-        }
-      }
-    }
-    console.log(min)
-    best = min.value
-  }
-
-  // let sum = 0
-  // for (let i = 0; i < 100000000000000; i++) {
-  //   sum += 1
-  //   // if (i % 1000000 === 0) console.log(i)
-  // }
-  // console.log('done')
+  console.log(await findAnswer(true))
 }
 
 export async function part2() {
-  // const input = await getInput(24)
+  console.log(await findAnswer(false))
+}
+
+async function findAnswer(isMax) {
+  const input = await getInput(24)
+  const program = new Program(input)
+
+  let close = findClose(program)
+  let matches = []
+  while (true) {
+    for (let i = 0; i < 14 - 2; i++) {
+      for (let j = i + 1; j < 14 - 1; j++) {
+        for (let k = j + 1; k < 14; k++) {
+          for (let a = 1; a <= 9; a++) {
+            for (let b = 1; b <= 9; b++) {
+              for (let c = 1; c <= 9; c++) {
+                const modelNumber = [...close]
+                modelNumber[i] = a
+                modelNumber[j] = b
+                modelNumber[k] = c
+                program.exec(arrayInput(modelNumber))
+                if (program.registerValue('z') === 0) {
+                  matches.push(modelNumber.join(''))
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    matches.sort()
+    if (isMax) matches.reverse()
+    const best = matches[0]
+    if (close.join('') === best) return best
+    close = best.split('').map((v) => +v)
+  }
+}
+
+function findClose(program) {
+  const filler = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+  const close = []
+  for (let digitIndex = 0; digitIndex < 14; digitIndex++) {
+    let min = null
+    for (let digit = 9; digit >= 1; digit--) {
+      const a = [...close, digit, ...filler.slice(0, 14 - digitIndex - 1)]
+      program.exec(arrayInput(a))
+      if (min === null || program.registerValue('z') < min.z) {
+        min = { digit, z: program.registerValue('z') }
+      }
+    }
+    close.push(min.digit)
+  }
+  return close
 }
 
 class Program {
